@@ -13,6 +13,7 @@
 """Backend namespace for an IBM Quantum account."""
 
 import copy
+
 import logging
 from datetime import datetime
 from typing import Dict, List, Callable, Optional, Any, Union
