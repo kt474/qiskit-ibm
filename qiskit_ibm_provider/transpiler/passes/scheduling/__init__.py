@@ -22,6 +22,10 @@ backends that support advanced "dynamic circuit" capabilities. Ie.,
 circuits with support for classical control-flow/feedback based off
 of measurement results.
 
+.. warning::
+    You should not mix these scheduling passes with Qiskit's builtin scheduling
+    passes as they will negatively interact with the scheduling routines for
+    dynamic circuits. This includes setting ``scheduling_method`` in ``transpile``.
 
 Below we demonstrate how to schedule and pad a teleportation circuit with delays
 for a dynamic circuit backend's execution model:
@@ -30,17 +34,21 @@ for a dynamic circuit backend's execution model:
 
     from qiskit import transpile
     from qiskit.circuit import ClassicalRegister, QuantumCircuit, QuantumRegister
-    from qiskit.transpiler.instruction_durations import InstructionDurations
     from qiskit.transpiler.passmanager import PassManager
 
-    from qiskit_ibm_provider.transpiler.passes.scheduling import DynamicCircuitScheduleAnalysis, PadDelay
+    from qiskit_ibm_provider.transpiler.passes.scheduling import DynamicCircuitInstructionDurations
+    from qiskit_ibm_provider.transpiler.passes.scheduling import ALAPScheduleAnalysis
+    from qiskit_ibm_provider.transpiler.passes.scheduling import PadDelay
     from qiskit.providers.fake_provider.backends.jakarta.fake_jakarta import FakeJakarta
 
 
     backend = FakeJakarta()
 
-    durations = InstructionDurations.from_backend(backend)
-    pm = PassManager([DynamicCircuitScheduleAnalysis(durations), PadDelay()])
+    # Use this duration class to get appropriate durations for dynamic
+    # circuit backend scheduling
+    durations = DynamicCircuitInstructionDurations.from_backend(backend)
+    # Configure the as-late-as-possible scheduling pass
+    pm = PassManager([ALAPScheduleAnalysis(durations), PadDelay()])
 
     qr = QuantumRegister(3)
     crz = ClassicalRegister(1, name="crz")
@@ -80,7 +88,7 @@ using the :class:`PadDynamicalDecoupling` pass as shown below:
 
     pm = PassManager(
         [
-            DynamicCircuitScheduleAnalysis(durations),
+            ALAPScheduleAnalysis(durations),
             PadDynamicalDecoupling(durations, dd_sequence),
         ]
     )
@@ -96,7 +104,9 @@ Scheduling & Dynamical Decoupling
    :toctree: ../stubs/
 
     BlockBasePadder
-    DynamicCircuitScheduleAnalysis
+    ALAPScheduleAnalysis
+    ASAPScheduleAnalysis
+    DynamicCircuitInstructionDurations
     PadDelay
     PadDynamicalDecoupling
 
@@ -107,4 +117,5 @@ Scheduling & Dynamical Decoupling
 from .block_base_padder import BlockBasePadder
 from .dynamical_decoupling import PadDynamicalDecoupling
 from .pad_delay import PadDelay
-from .scheduler import DynamicCircuitScheduleAnalysis
+from .scheduler import ALAPScheduleAnalysis, ASAPScheduleAnalysis
+from .utils import DynamicCircuitInstructionDurations
